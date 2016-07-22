@@ -15,7 +15,7 @@ export default class Utils {
      * @param object
      * @returns {boolean}
      */
-    static isObject (object) {
+    static isObject(object) {
         return typeof object === 'object';
     }
 
@@ -24,7 +24,7 @@ export default class Utils {
      * @param object
      * @returns {boolean}
      */
-    static isFunction (object) {
+    static isCallable(object) {
         return typeof object === 'function';
     }
 
