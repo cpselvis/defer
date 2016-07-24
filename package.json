@@ -1,5 +1,5 @@
 {
-  "name": "defer",
+  "name": "defer-js",
   "version": "0.0.1",
   "description": "A lightweighted promise library follow Promise / A+ standards.",
   "main": "src/defer.js",

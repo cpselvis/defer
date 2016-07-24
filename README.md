@@ -1,6 +1,10 @@
 # defer
 
-*A lightweighted promise library follow Promise / A+ standards.
+* A lightweighted promise library follow Promise / A+ standards.
+
+[![NPM version](https://img.shields.io/npm/v/defer-js.svg?style=flat-square)](https://www.npmjs.com/package/defer-js)
+[![Build Status](https://travis-ci.org/cpselvis/defer.svg?branch=master)](https://travis-ci.org/cpselvis/defer)
+[![Coverage Status](https://coveralls.io/repos/github/cpselvis/defer-js/badge.svg?branch=master)](https://coveralls.io/github/cpselvis/defer-js?branch=master)
 
 I think if you want to build your own promise, the main part is to maintain a state machine, you should know how to transform state between pending,
 fulfilled and rejected.
