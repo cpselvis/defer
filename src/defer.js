@@ -3,6 +3,7 @@
 /**
  * @file Defer     main file. (Defer is just a state machine.)
  * Implement steps follow: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-promise-objects.
+ *                         https://github.com/promises-aplus/promises-spec
  *
  * External invoke examples:
  * First step, create a defer instance:
@@ -37,6 +38,7 @@ const FULFILLED = 1;                            // Action related to defer has s
 const REJECTED = 2;                             // Action related to defer
 
 
+
 export default class Defer {
 
   /**
@@ -64,6 +66,7 @@ export default class Defer {
     }
 
     this[PromiseState] = PENDING;
+    this[PromiseResult] = '';
     this[PromiseFulfillReactions] = [];
     this[PromiseRejectReactions] = [];
 
@@ -80,12 +83,10 @@ export default class Defer {
     let _resolve, _reject;
 
     _resolve = (resolution) => {
-      _resolve = _reject = noop;
       this._resolvePromise(promise, resolution);
     };
 
     _reject = (reason) => {
-      _resolve = _reject = noop;
       this._rejectPromise(promise, reason);
     };
 
@@ -101,7 +102,7 @@ export default class Defer {
       return this._rejectPromise(promise, new TypeError('Self Resolution Error.'));
     }
 
-    if (!isObject(resolution)) {
+    if (!Utils.isObject(resolution)) {
       return this._fulfillPromise(promise, resolution);
     }
 
@@ -113,11 +114,11 @@ export default class Defer {
       return this._rejectPromise(promise, e);
     }
 
-    if (!isCallable(then)) {
+    if (!Utils.isCallable(then)) {
       return this._fulfillPromise(promise, resolution);
     }
 
-    // To do.. Add then to promise jobs.
+    // To do: enqueue promise jobs.
   }
 
   _rejectPromise(promise, reason) {
@@ -126,6 +127,7 @@ export default class Defer {
     promise[PromiseFulfillReactions] = undefined;
     promise[PromiseRejectReactions] = undefined;
     promise[PromiseState] = REJECTED;
+    this._triggerPromiseReactions(reactions, reason);
   }
 
   _fulfillPromise(promise, value) {
@@ -134,30 +136,96 @@ export default class Defer {
     promise[PromiseFulfillReactions] = undefined;
     promise[PromiseRejectReactions] = undefined;
     promise[PromiseState] = FULFILLED;
+    this._triggerPromiseReactions(reactions, value);
   }
+
+  _triggerPromiseReactions(reactions, argument) {
+    for (let i = 0; i < reactions.length; i ++) {
+      reactions[i](argument);
+    }
+  }
+
+  _newPromiseCapability() {
+    let promiseCapability = {};
+
+    promiseCapability.promise = new Defer(function(resolve, reject) {
+      promiseCapability.resolve = resolve;
+      promiseCapability.reject = reject;
+    });
+
+    return promiseCapability;
+  }
+
 
   //   Exposed API to external world.
-  all() {
 
-  }
 
-  resolve() {
-
-  }
-
-  reject() {
-
-  }
-
-  race() {
-
-  }
-
+  /**
+   * Then must return a promise
+   * @param onFulfilled
+   * @param onRejected
+     */
   then(onFulfilled, onRejected) {
-
+    const promise = this;
+    const resultCapability = this._newPromiseCapability();
+    const resolve = resultCapability.resolve;
+    const reject = resultCapability.reject;
+    switch (promise[PromiseState]) {
+      case FULFILLED:
+        try {
+          const x = onFulfilled(promise[PromiseResult]);
+          if (x instanceof Defer) {
+            x.then(resolve, reject);
+          }
+          resolve(x);
+        } catch (e) {
+          reject(e);
+        }
+        break;
+      case REJECTED:
+        try {
+          const x = onRejected(promise[PromiseResult]);
+          if (x instanceof Defer) {
+            x.then(resolve, reject);
+          }
+          resolve(x);
+        } catch (e) {
+          reject(e);
+        }
+        break;
+      default:
+        promise[PromiseFulfillReactions].push(
+          function (value) {
+            try {
+              const x = onFulfilled(value);
+              if (x instanceof Defer) {
+                x.then(resolve, reject);
+              }
+              resolve(x);
+            } catch (e) {
+              reject(e);
+            }
+          }
+        );
+        promise[PromiseRejectReactions].push(
+          function (reason) {
+            try {
+              const x = onRejected(reason);
+              if (x instanceof Defer) {
+                x.then(resolve, reject);
+              }
+              resolve(x);
+            } catch (e) {
+              reject(e);
+            }
+          }
+        );
+        break;
+    }
+    return resultCapability.promise;
   }
 
-  catch() {
-
+  catch(onRejected) {
+    return this.then(undefined, onRejected)
   }
 }
